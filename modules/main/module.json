@@ -1,0 +1,38 @@
+{
+  "name": "main",
+  "creators": ["ASTATIN3"],
+  "version": "1.0",
+  "entrypoint": "modules/main/main.py",
+  "tabs": [
+      {
+          "name": "main",
+          "defaultPage": "dashboard",
+          "pages": [
+                {
+                    "type": "page",
+                    "name": "dashboard",
+                    "requiredPermGroup": "",
+                    "location": "modules/main/Dashboard.html"
+                },
+                {
+                    "type": "folder",
+                    "name": "Settings",
+                    "pages": [
+                        {
+                            "type": "page",
+                            "name": "User",
+                            "requiredPermGroup": "",
+                            "location": "modules/main/userSettings.html"
+                        },
+                        {
+                            "type": "page",
+                            "name": "Admin",
+                            "requiredPermGroup": "Admins",
+                            "location": "modules/main/adminSettings.html"
+                        }
+                    ]
+                }
+          ]
+      }
+  ]
+}

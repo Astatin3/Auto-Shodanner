@@ -1,0 +1,33 @@
+<html data-theme="dark">
+<head>
+  <link href="/src/pico.min.css" rel="stylesheet">
+  <link href="/src/style.css" rel="stylesheet">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark" />
+  <title><!--Place title here!!!--></title>
+</head>
+<body>
+  <nav class="navbar text-invert noselect">
+    <ul class="nav">
+      <!--Place tabs here!!!-->
+      <h2 class="navconntext text-invert" id="connecticon" onclick="window.location.reload()" style="cursor:pointer;">
+        Disconnected
+      </h2>
+    </ul>
+  </nav>
+  <div class="navpanel text-invert noselect">
+      <a href="<!--Place defaultPage here!!!-->" class="text-invert navTitle">
+        <!--Place title here!!!-->
+      </a>
+      <hr>
+      <!--Place pages here!!!-->
+  <hr>
+  </div>
+  <div class="maindiv">
+    <!--Place body here!!!-->
+  </div>
+  <div id="popupBox" class="popupBox">  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

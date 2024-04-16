@@ -1,0 +1,293 @@
+@font-face {
+    font-family: "UbuntuMono";
+    src: url(/src/UbuntuMono-R.ttf) format("truetype");
+}
+
+:root {
+    --topnavheight: 45px;
+    --sidenavwidth: 150px;
+    --popupBoxWidth: 300px;
+
+    --background-0: #212529;
+    --background-1: #404040;
+
+    --nav-color: rgba(0,0,0,0.3);
+
+    --text-0: #242424;
+    --text-1: #d3d3d3;
+
+    --text-black: #242424;
+    --text-white: var(--pico-primary-inverse);
+
+    --success-1:#059100;
+    --warning-1:#ffdc3e;
+    --error-1: #b60f0f;
+
+    --font: "UbuntuMono";
+    --pico-font-family: UbuntuMono, regular;
+}
+
+* { 
+    font-family: var(--font) !important;
+}
+
+body {
+    position:fixed;
+    right: 0;
+    height: 0;
+    overflow: scroll;
+    width: calc( 100vw - var(--sidenavwidth) + 32px );
+    height: calc( 100vh - var(--topnavheight) + 32px );
+}
+
+.maindiv {
+    position: fixed;
+    top: var(--topnavheight);
+    left: var(--sidenavwidth);
+    width: calc(100% - var(--sidenavwidth));
+    height: calc(100% - var(--topnavheight));
+    padding: 5px;
+    overflow: scroll;
+}
+
+.text-invert {
+    color: var(--pico-primary-inverse) !important;
+    font-family: var(--font);
+}
+
+/* .text-black {
+    color: var(--text-black) !important;
+    font-family: var(--font);
+} */
+
+.half-left {
+    position: relative;
+    display: inline-block;
+    width: 45%;
+    margin-right: calc(4%);
+}
+
+.half-right {
+    position: relative;
+    display: inline-block;
+    width: 44%;
+    margin-left: 4%;
+}
+
+
+.navbar {
+    position: fixed;
+    top:0;
+    left:0;
+    right:0;
+    height:var(--topnavheight);
+    padding:5px;
+    padding-left: calc(var(--sidenavwidth) + 10px);
+    z-index: 10;
+    background-color: var(--nav-color);
+}
+
+.navbar ul {
+    position: fixed;
+    top: calc(var(--topnavheight) * 0.1);
+    padding: 0px;
+    /* height: var(--topnavheight); */
+    height: calc(var(--topnavheight) * 0.8);
+    padding-right: calc(var(--topnavheight) * 2.8);
+    left: var(--sidenavwidth);
+    width: calc(100% - var(--sidenavwidth));
+    overflow-x: scroll;
+    overflow-y: hidden;
+}
+
+.navpanel {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 24px;
+    overflow: hidden;
+    padding-left: 14px;
+    
+
+    position:fixed;
+    top: var(--topnavheight);
+    bottom:0;
+    left:0;
+    width: var(--sidenavwidth);
+    height:100%;
+    resize: left;
+    z-index: 20;
+    background-color: var(--nav-color);
+}
+
+.navpanel details {
+    padding-bottom: 0px;
+    padding-left: 5px;
+    margin-bottom: 0px;
+}
+
+.navpanel summary {
+    font-size: 15px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 0px !important;
+}
+
+.navpanel summary:hover {
+    color: var(--primary);
+    background-color: rgba(0,0,0,0.1);
+}
+.navpanel ul {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding-left: 5px;
+}
+
+
+.navpanel li {
+    font-size: 14px;
+    margin-left: -5px;
+    margin-bottom:  0;
+    cursor: pointer;
+}
+
+.navpanel li:hover {
+    color: var(--primary);
+    background-color: rgba(0,0,0,0.1);
+}
+
+li::marker {
+    content: "- ";
+    padding-left: -20px;
+    padding-right: 5px;
+  }
+
+
+.navconntext {
+    position: fixed;
+    font-size: calc(var(--topnavheight) * 0.3);
+    margin: calc((var(--topnavheight) * 0.25 * 0.75) - 5px);
+    background-color: rgba(255, 0, 0, 0.2);
+    border-style: solid;
+    border-width: 1px !important;
+    border-color: #ff0000;
+    padding: 8px;
+    right:0;
+    top:0;
+}
+
+.sidenav-button {
+    width:100%;
+    margin-bottom: 10px;
+}
+
+.topnav-button {
+    margin-left: 13px !important;
+    height: 100% !important;
+
+    font-size: calc( var(--topnavheight) * ( 3 / 9 ) );
+    line-height: calc( var(--topnavheight) * ( 3 / 9 ) );
+
+}
+
+.navTitle {
+    position: fixed;
+    margin-bottom: 1px;
+    top: 0;
+    left: 0;
+    width: var(--sidenavwidth);
+    height: var(--topnavheight);
+
+    text-align:center;
+    line-height: var(--topnavheight);
+
+    text-decoration:none;
+}
+
+.navTitle:hover {
+    background-color: rgba(0,0,0,0.1);
+}
+
+
+.popupBox {
+    position: fixed;
+
+    /* display: flex;
+    box-sizing: content-box;
+    justify-content: flex-end;
+    flex-direction: column; */
+
+    width: var(--popupBoxWidth);
+    height: calc(100% - var(--topnavheight) - 10px);
+    pointer-events: none;
+    bottom: 0;
+    right: 20px;
+    overflow: auto;
+}
+
+.popupBox dialog {
+    display: flex;
+    z-index: inherit;
+    position: relative;
+    top: inherit;
+    right: inherit;
+    bottom: inherit;
+    left: inherit;
+    align-items: inherit;
+    justify-content: inherit;
+    width: inherit;
+    min-width: inherit;
+    height: auto;
+    min-height: inherit;
+    padding: 0;
+    background-color: inherit;
+
+    pointer-events: all;
+
+    left: 0;
+    margin: 0;
+    margin-bottom: 20px;
+
+    justify-content:right;
+    flex-direction: column;
+}
+
+.popupBox article {
+    margin: 0;
+    opacity: 0.5;
+    padding-bottom: 10px;
+}
+
+.popupBox header {
+    border: 0;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+.popupBox article:hover {
+    opacity: 1;
+}
+
+dialog article a {
+    cursor: pointer;
+}
+
+
+.popupBox article p {
+    font-size: 15px;
+}
+
+.noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+      -webkit-user-select: none; /* Safari */
+       -khtml-user-select: none; /* Konqueror HTML */
+         -moz-user-select: none; /* Old versions of Firefox */
+          -ms-user-select: none; /* Internet Explorer/Edge */
+              user-select: none; /* Non-prefixed version, currently
+                                    supported by Chrome, Edge, Opera and Firefox */
+  }

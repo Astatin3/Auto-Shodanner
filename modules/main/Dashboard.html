@@ -1,0 +1,19 @@
+
+
+<main class="container">
+</main>
+
+<script>
+
+window.main = () => {
+  window.addListener('Scanner-Metrics', (data)=>{
+    document.getElementsByClassName("container")[0].innerHTML = `
+    <h1>Auto-Shodanner</h1>
+    <h3>Addresses Scanned: ${data.data.scanCount} (${data.data.scanCount/42949672.96}% Of the internet.)</h3>
+    `
+  })
+}
+
+
+
+</script>

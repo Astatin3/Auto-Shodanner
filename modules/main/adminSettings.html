@@ -1,0 +1,248 @@
+<main class="container">
+  <h3>User Settings</h3>
+  <h4>Users</h4>
+  <table role="grid">
+    <thead>
+      <tr>
+        <th scope="col">Username</th>
+        <th scope="col">Created</th>
+        <th scope="col">Pass Updated</th>
+        <th scope="col">Groups</th>
+        <th scope="col">Manage</th>
+      </tr>
+    </thead>
+    <tbody id="userTable"></tbody>
+  </table>
+  <h4>Sessions</h4>
+  <table role="grid">
+    <thead>
+      <tr>
+        <th scope="col">Username</th>
+        <th scope="col">Address</th>
+        <th scope="col">Path</th>
+        <th scope="col">Expires</th>
+        <th scope="col">Manage</th>
+      </tr>
+    </thead>
+    <tbody id="sessionTable"></tbody>
+  </table>
+  <button onclick="addUser()">Add New User</button>
+</main>
+<script>
+  let userData = {}
+
+  function promptUnauth(clientid) {
+    utils.confirmBox('var(--card-sectionning-background-color)', true, 'Are you sure you want to log this session out?', `unauthSession('${clientid}')`, '')
+  }
+
+  function unauthSession(id) {
+    window.send('unauth', id)
+  }
+
+  function addUser() {
+    const elem = document.body
+    const bgcolor = 'var(--card-sectionning-background-color)'
+    const header = 'rgba(255,255,255,0.05)'
+    const textColor = 'text-white'
+    const title = "Add user"
+    
+    utils.modal(elem, bgcolor,  header, textColor, title, `
+    <input autocomplete="new-password" id="username" placeholder="Username"></input>
+    <input autocomplete="new-password" id="groups" placeholder="User groups (Users, Admins, ...)"></input>
+    <input autocomplete="new-password" id="password1" type="password" placeholder="New Password"></input>
+    <input autocomplete="new-password" id="password2" type="password" placeholder="Retype new Password"></input>
+    <button class="outline half-left" onclick="this.parentElement.parentElement.remove()">Cancel</button>
+    <button class="half-right" onclick="addUserPrompt()">Submit</button>`)
+    // For some reason, after opening a second modal, the first one is not deleted.
+    // So I have to maually delete it using document.body.children[5].remove()
+  }
+
+  function addUserPrompt() {
+    const username = utils.getel("username").value
+    const groups = utils.getel("groups").value
+    const password1 = utils.getel("password1").value
+    const password2 = utils.getel("password2").value
+
+    document.body.children[5].remove()
+
+    if(username == "" || password1 == "" || password2 == ""){
+      utils.popupError("Error", "Please fill out all areas of form")
+      return
+    }else if(password1 != password2){
+      utils.popupError("Error", "Passwords don't match")
+      return
+    }
+
+    const elem = document.body
+    const bgcolor = 'var(--card-sectionning-background-color)'
+    const header = 'rgba(255,255,255,0.05)'
+    const textColor = 'text-white'
+    const title = "Add user"
+    
+    utils.modal(elem, bgcolor, header, textColor, title, `
+    <p>Are you sure you want to add this user?</p>
+    <p>Username: ${username}</p>
+    <p>Groups: ${groups}</p>
+    <p>Password: (hidden)</p>
+    <br>
+    <button class="outline half-left" onclick="addUserSubmit('${username}','${groups}','${password1}');this.parentElement.parentElement.remove()">Yes</button>
+    <button class="half-right" onclick="this.parentElement.parentElement.remove()">No</button>`)
+    return
+  }
+
+  function addUserSubmit(username, groups, password) {
+    client.send("addUserRequest", {
+      username: username,
+      groups: groups.split(", "),
+      password: utils.sha256(password)
+    })
+  }
+
+  function manageUser(id) {
+    const elem = document.body
+    const bgcolor = 'var(--card-sectionning-background-color)'
+    const header = 'rgba(255,255,255,0.05)'
+    const textColor = 'text-white'
+    const title = "Manage user"
+    
+    utils.modal(elem, bgcolor, textColor, header, title, `
+    <button onclick="promptDisconnectSessions('${id}')">Disconnect all sessions</button>
+    <button onclick="promptChangePassword('${id}');this.parentElement.parentElement.remove()">Edit Password</button>
+    <button onclick="promptChangeGroups('${id}');this.parentElement.parentElement.remove()">Edit Groups</button>
+    <button onclick="promptRemoveUser('${id}');this.parentElement.parentElement.remove()">Delete</button>
+    <button class="outline" onclick="this.parentElement.parentElement.remove()">Cancel</button>
+    `)
+  }
+
+  function promptDisconnectSessions(id) {
+    document.body.children[5].remove()
+    utils.confirmBox('var(--card-sectionning-background-color)', true, 'Are you sure you want to disconnect all sessions for this user?', `disconnectSessions('${id}')`, '')
+  }
+
+  function disconnectSessions(id) {
+    client.send("disconnectAllSessions", {
+      id: id
+    })
+  }
+
+  function promptChangePassword(id) {
+    document.body.children[5].remove()
+
+    const elem = document.body
+    const bgcolor = 'var(--card-sectionning-background-color)'
+    const header = 'rgba(255,255,255,0.05)'
+    const textColor = 'text-white'
+    const title = "Manage user"
+    
+    utils.modal(elem, bgcolor, textColor, header, title, `
+    <input autocomplete="new-password" id="password1" type="password" placeholder="New Password"></input>
+    <input autocomplete="new-password" id="password2" type="password" placeholder="Retype new Password"></input>
+    <button class="outline half-left" onclick="this.parentElement.parentElement.remove()">Cancel</button>
+    <button class="half-right" onclick="changePassword('${id}')">Submit</button>
+    `)
+  }
+
+  function changePassword(id) {
+    const password1 = utils.getel("password1").value
+    const password2 = utils.getel("password2").value
+
+    document.body.children[5].remove()
+
+    if(password1 == "" || password2 == ""){
+      utils.popupError("Error", "Please fill out all areas of form")
+      return
+    }else if(password1 != password2){
+      utils.popupError("Error", "Passwords don't match")
+      return
+    }
+
+    client.send("passwordChangeRequest", {
+      id: id,
+      new: utils.sha256(password1)
+    })
+  }
+
+  function promptChangeGroups(id) {
+    document.body.children[5].remove()
+
+    const user = utils.getatribinarr(userData, 'id', id)
+
+    const elem = document.body
+    const bgcolor = 'var(--card-sectionning-background-color)'
+    const header = 'rgba(255,255,255,0.05)'
+    const textColor = 'text-white'
+    const title = "Edit groups"
+    
+    utils.modal(elem, bgcolor, textColor, header, title, `
+    <input autocomplete="new-password" id="groups" placeholder="User groups (Users, Admins, ...)" value="${user.permGroups.join(", ")}"></input>
+    <button class="half-left" onclick="this.parentElement.parentElement.remove()">Cancel</button>
+    <button class="outline half-right" onclick="changeGroups('${id}')">Submit</button>
+    `)
+  }
+
+  function changeGroups(id) {
+    const groups = utils.getel("groups").value
+
+    document.body.children[5].remove()
+
+    if(groups == ""){
+      utils.popupError("Error", "Please fill out all areas of form")
+      return
+    }
+
+    client.send("changeGroupsRequest", {
+      id: id,
+      groups: groups.split(", ")
+    })
+  }
+
+  function promptRemoveUser(id) {
+    document.body.children[5].remove()
+    utils.confirmBox('var(--card-sectionning-background-color)', true, 'Are you sure you want to remove this user?', `removeUser('${id}')`, '')
+  }
+  
+  function removeUser(id) {
+    client.send("deleteUserRequest", {
+      id: id
+    })
+  }
+
+  window.main = ()=>{
+
+  window.addListener("sessions", (data)=>{
+    users = data.data.users
+    html = ""
+    userData = users
+    for(let i=0;i<users.length;i++){
+      html += `
+        <tr>
+          <td>${users[i].username}</td>
+          <td>${utils.formatTime(users[i].created)}</td>
+          <td>${utils.formatTime(users[i].passwordUpdated)}</td>
+          <td>${users[i].permGroups.join(", ")}</td>
+          <td><a href="#" onclick="manageUser('${users[i].id}')">Manage</a></td>
+        </tr>
+      `
+    }
+    utils.getel('userTable').innerHTML = html
+
+    sessions = data.data.sessions
+    html = ""
+    for(let i=0;i<sessions.length;i++){
+      html += `
+        <tr>
+          <td>${sessions[i].username}</td>
+          <td>${sessions[i].address}</td>
+          <td>${sessions[i].currentPage}</td>
+          <td>${utils.formatTime(sessions[i].timeout)}</td>
+          <td><a href="#" onclick="promptUnauth('${sessions[i].clientid}')">Logout</a></td>
+        </tr>
+      `
+    }
+    
+    utils.getel('sessionTable').innerHTML = html
+  })
+  
+  }
+
+</script>

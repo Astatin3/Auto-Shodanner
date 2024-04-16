@@ -1,0 +1,26 @@
+
+<section>
+  <div class="container ubuntuMono">
+      <h4 class="noselect ubuntuMono"><!--Place title here!!!--> - Log in</h4>
+      <input id="usernamebox" name="username" placeholder="B0b5m1th" required>
+      <label for="username" class="noselect">Username</label>
+      <input type="password" class="form-control" id="passwordbox" name="password" placeholder="Password" value="" required>
+      <label for="password" class="noselect">Password</label>
+
+      <button onclick="submit()">Log in</button>
+
+    </div>
+  </div>
+</section>
+
+<script>
+function submit(){
+  const usernamebox = utils.getel('usernamebox')
+  const passwordbox = utils.getel('passwordbox')
+
+  authLogin(usernamebox.value, passwordbox.value)
+}
+
+window.main = ()=>{}
+
+</script>

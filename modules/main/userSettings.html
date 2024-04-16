@@ -1,0 +1,105 @@
+<main class="container">
+  <h3>User Settings</h3>
+  <div id="details"></div>
+  <h4>Sessions</h4>
+  <table role="grid">
+    <thead>
+      <tr>
+        <th scope="col">Username</th>
+        <th scope="col">Address</th>
+        <th scope="col">Path</th>
+        <th scope="col">Expires</th>
+        <th scope="col">Manage</th>
+      </tr>
+    </thead>
+    <tbody id="sessionTable"></tbody>
+  </table>
+  <button id="changePassword" onclick="changePassword()">Change Password</button>
+  <button id="logoutButton" onclick="promptLogout()">Logout</button>
+</main>
+<script>
+  function promptLogout() {
+    utils.confirmBox('var(--card-sectionning-background-color)', true, 'Are you sure you want to log out?', 'logout()', '')
+  }
+
+  function promptUnauth(clientid) {
+    utils.confirmBox('var(--card-sectionning-background-color)', true, 'Are you sure you want to log this session out?', `unauthClient('${clientid}')`, '')
+  }
+
+  function logout() {
+    window.send('logout', {})
+    utils.setCookie('session', '')
+  }
+
+  function unauthSession(id) {
+    window.send('unauth', id)
+  }
+
+  function changePassword() {
+    const elem = document.body
+    const bgcolor = 'var(--card-sectionning-background-color)'
+    const header = 'rgba(255,255,255,0.05)'
+    const textColor = 'text-white'
+    const title = "Change password"
+    
+    utils.modal(elem, bgcolor,  header, textColor, title, `
+    <input id="oldPassword" type="password" placeholder="Old Password"></input>
+    <input autocomplete="new-password" id="password1" type="password" placeholder="New Password"></input>
+    <input autocomplete="new-password" id="password2" type="password" placeholder="Retype new Password"></input>
+    <button onclick="passwordSubmit();document.body.removeChild(this.parentElement.parentElement)">Submit</button>`)
+  }
+
+  function passwordSubmit() {
+    const oldPassword = utils.getel("oldPassword").value
+    const password1 = utils.getel("password1").value
+    const password2 = utils.getel("password2").value
+
+    if(oldPassword == "" || password1 == "" || password2 == ""){
+      utils.popupError("Error", "Please fill out all areas of form")
+      return
+    }else if(password1 != password2){
+      utils.popupError("Error", "Passwords don't match")
+      return
+    }
+
+    client.send("passwordChangeRequest", {
+      id: authClient.id,
+      old: utils.sha256(oldPassword),
+      new: utils.sha256(password1)
+    })
+  }
+
+
+  window.main = ()=>{
+
+
+  window.addListener("reauth", (data)=>{
+    let details = utils.getel('details')
+
+    details.innerHTML += "<p>Username: " + authClient.username + "</p>"
+    details.innerHTML += "<p>Groups: " + authClient.permGroups.join(", ") + "</p>"
+    details.innerHTML += "<p>Created: " + utils.formatTime(authClient.accountCreated) + "</p>"
+    details.innerHTML += "<p>Password Updated: " + utils.formatTime(authClient.passwordUpdated) + "</p>"
+  })
+
+  window.addListener("sessions", (data)=>{
+    sessions = data.data
+    let html = ""
+    for(let i=0;i<sessions.length;i++){
+      html += `
+        <tr>
+          <td>${sessions[i].username}</td>
+          <td>${sessions[i].address}</td>
+          <td>${sessions[i].currentPage}</td>
+          <td>${utils.formatTime(sessions[i].timeout)}</td>
+          <td><a href="#" onclick="unauthSession('${sessions[i].clientid}')">Logout</a></td>
+        </tr>
+      `
+    }
+    utils.getel('sessionTable').innerHTML = html
+    
+  })
+  
+  }
+
+</script>

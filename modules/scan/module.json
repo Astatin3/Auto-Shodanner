@@ -1,0 +1,20 @@
+{
+  "name": "Scan",
+  "creators": ["ASTATIN3"],
+  "version": "1.0",
+  "entrypoint": "modules/scan/main.py",
+  "tabs": [
+      {
+          "name": "Scan",
+          "defaultPage": "Scan",
+          "pages": [
+                {
+                    "type": "page",
+                    "name": "Scan",
+                    "requiredPermGroup": "",
+                    "location": "modules/scan/scan.html"
+                }
+          ]
+      }
+  ]
+}

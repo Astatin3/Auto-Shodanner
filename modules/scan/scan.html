@@ -1,0 +1,23 @@
+
+<main class="container">
+  <h4>This is a very simple example module!</h4>
+  <button class="half-left" onclick="startScanner()">Start Scanner</button>
+  <button class="half-right" onclick="stopScanner()">Stop Scanner</button>
+</main>
+
+<script>
+  window.main = ()=>{
+    window.addListener('Scanner-LoadSettings', (data)=>{})
+  }
+
+  function getel(el) {return document.getElementById(el)}
+
+  function startScanner() {
+    window.send('Scanner-StartScanner', {})
+  }
+
+  function stopScanner() {
+    window.send('Scanner-StopScanner', {})
+  }
+
+</script>
