@@ -88,6 +88,7 @@ def scan(address:str, port:str):
   ssl_sock = context.wrap_socket(sock, server_hostname=address)
   
   returnVal = ""
+  error = False
   
   try:
     # Connect to the server
@@ -96,24 +97,24 @@ def scan(address:str, port:str):
     ssl_sock.sendall(generate_headers().encode())
     
     cert = ssl_sock.getpeercert(binary_form=True)
-    # Receive the response    
-    response = b""
+    # Receive the response
     while True:
       
       chunk = ssl_sock.recv(64)
       if not chunk: break
       
-      response += chunk
-
-    returnVal = f"Response {response.decode()}" + "\n"
+      returnVal += chunk.decode()
+    
+    returnVal += "\n"
     
     returnVal += "SSL Certificate Information:\n"
     returnVal += get_ssl_cert_info(cert) + "\n"
     returnVal += "######### \n"
       
-  except socket.error as e:
-    returnVal = f"<Error> (possible connection reset) {e}"
+  except Exception as e:
+    returnVal += f"<error {e}>"
+    error = True
   finally:
     if ssl_sock:
       ssl_sock.close()
-  return returnVal
+  return returnVal, error

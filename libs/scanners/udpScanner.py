@@ -1,2 +1,2 @@
 def scan(address:str, port:int):
-  return f'<{address}:{port}>'
+  return f'<{address}:{port}>', False

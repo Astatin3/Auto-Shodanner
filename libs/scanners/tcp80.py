@@ -17,6 +17,7 @@ def generate_headers():
 
 def scan(host:str, port:int):
   returnVal = ""
+  error = False
   try:
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((host, port))
@@ -28,21 +29,18 @@ def scan(host:str, port:int):
 
     client_socket.send(request.encode())
 
-    response = b""
     while True:
-      
       chunk = client_socket.recv(64)
       
       if not chunk: break
       
-      response += chunk
+      returnVal += chunk.decode()
 
-    returnVal = "Response: " + response.decode()
-
-  except:
-    returnVal = "<Error> (possible connection reset)"
+  except Exception as e:
+    returnVal += f"<error {e}>"
+    error = True
   finally:
     if client_socket:
       client_socket.close()
   
-  return returnVal
+  return returnVal, error

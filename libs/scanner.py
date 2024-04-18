@@ -7,6 +7,8 @@ import struct
 import re
 from threading import Thread
 
+import nmap
+
 import src.utils as utils
 import libs.scanutils as scanutils
 
@@ -30,17 +32,28 @@ for script in utils.listSubdirs(utils.getRoot("libs/scanners/")):
 
   
 
-def getScanner(port: int, protocol: str):
+def scan(host:str, port: int, protocol: str):
+  error = False
+  results = ""
   for scanner in portScanners:
     if str(scanner.__name__) == f'{protocol}{port}.py':
-      return scanner
+      scanResults, error = scanner.scan(host, port)
+      results += f'[{scanner.__name__}, {host}:{port}] {scanResults}'
+      if not error:
+        return results
+      else:
+        results += " Trying default scanner... "
+    
   if protocol == "tcp":
-    return tcpScanner
+    scanResults, error = tcpScanner.scan(host, port)
+    results += f'[{tcpScanner.__name__}, {host}:{port}] {scanResults}'
   elif protocol == "udp":
-    return udpScanner
+    scanResults, error = udpScanner.scan(host, port)
+    results += f'[{udpScanner.__name__}, {host}:{port}] {scanResults}'
   else:
     raise Exception("This should not happen...")
 
+  return results
 
 
 def start(settings):
@@ -79,7 +92,11 @@ def start(settings):
 
   for i in range(0,settings['numJobs']):
     c = ScanTask(i)
-    t = Thread(target = c.run, args=(settings['maxPingTimeout'],portString,))
+    t = Thread(target = c.run, args=(
+      settings['maxPingTimeout'],
+      settings['maxNmapTimeout'],
+      settings['nmapGroupSize'], 
+      portString,))
     t.start()
     tasks.append(c)
 
@@ -98,26 +115,22 @@ def processStarted():
 
 
 
-def parseNmapResult(result: str, address: str):
+def parseNmapResult(result: object, host: str):
   
-  ports = scanutils.getPorts(result)
-  hostname = scanutils.getHostname(result)
-  resultstr = f'### {address} ({hostname}) {ports}\n'
+  hostname = result.hostname()
+  resultstr = f'### {host} ({hostname}) {result.keys()}\n'
   
-  # resultstr += f'Location: {scanutils.geolocation(address)}\n'
+  # resultstr += f'Location: {scanutils.geolocation(host)}\n'
   
-  for port in ports:
-    if port[1] != 'open':
-      continue
-    # resultstr += str(port) + '\n'
-
-    portInt = int(port[0].split("/")[0])
-    protocol = port[0].split("/")[1]
-    scanner = getScanner(portInt, protocol)
-    
-    resultstr += f'[{scanner.__name__}]\n'
-    resultstr += scanner.scan(address, portInt) + "\n"
-    
+  for protocol in result.all_protocols():
+    for portInt in result[protocol].keys():
+      port = result[protocol][portInt]
+      
+      if port['state'] != 'open':
+        continue
+      
+      resultstr += scan(host, portInt, protocol) + "\n"
+      
   print(resultstr)
 
 
@@ -125,29 +138,38 @@ class ScanTask:
   def __init__(self, threadid: int):
     self.threadid = threadid
     self.running = True
+    self.nm = nmap.PortScanner()
       
   def stop(self): 
       self.running = False
         
-  def run(self, maxPingTimeout: int, portString: str): 
+  def run(self, maxPingTimeout: int, maxNmapTimeout: int, nmapGroupSize: int, portString: str): 
     while self.running:
-      address = socket.inet_ntoa(struct.pack('>I', random.randint(1, 0xffffffff)))
+      ipGroup = []
+      while len(ipGroup) < nmapGroupSize and self.running:
+        address = socket.inet_ntoa(struct.pack('>I', random.randint(1, 0xffffffff)))
 
-      pingCommand = f"ping {address} -c 1 -W {maxPingTimeout}"
+        pingCommand = f"ping {address} -c 1 -W {maxPingTimeout}"
 
-      try:
-        subprocess.check_output(pingCommand.split(" "))
-        # print(f"{self.threadid} {address}: FOUND")
-      except subprocess.CalledProcessError:
-        # print(f"{self.threadid} {address}: FAIL")
-        continue
+        try:
+          subprocess.check_output(pingCommand.split(" "))
+          print(f"{self.threadid} {address}: FOUND {len(ipGroup)+1}/{nmapGroupSize}")
+          ipGroup.append(address)
+        except subprocess.CalledProcessError:
+          # print(f"{self.threadid} {address}: FAIL")
+          continue
+      print(f'Scanning: {ipGroup}')
 
+      self.nm.scan(hosts=' '.join(ipGroup), ports=portString, arguments="-O --send-eth --privileged -sS --reason -sU")
+      
+      for address in self.nm.all_hosts():
+        parseNmapResult(self.nm[address], address)
 
-      nmapCommand = f"sudo nmap {address} -O --send-eth --privileged -v -sS --reason -sU -p {portString}"
+      # nmapCommand = f"sudo nmap {address} -O --send-eth --privileged -v -sS --reason -sU -p {portString}"
     
       
-      try:
-        parseNmapResult(subprocess.check_output(nmapCommand.split(" ")).decode(), address)
-      except subprocess.CalledProcessError:
-        continue
+      # try:
+      #   parseNmapResult(subprocess.check_output(nmapCommand.split(" ")).decode(), address)
+      # except subprocess.CalledProcessError:
+      #   continue
       

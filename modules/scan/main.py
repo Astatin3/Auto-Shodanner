@@ -27,8 +27,10 @@ def init(moduleMaster):
   
   mm.vars['Scanner-Settings'] = {
     "range": [[0,0,0,0], [255,255,255,255]],
-    "numJobs": 10,
-    "maxPingTimeout": 1,
+    "numJobs": 30,
+    "maxPingTimeout": 3,
+    "maxNmapTimeout": 2,
+    "nmapGroupSize": 3,
     
     # Port modes:
     # -1: Disable
@@ -37,16 +39,16 @@ def init(moduleMaster):
     #  3: Related to word
     
     "tcpSettings": {
-      "mode": 1,
-      "ports": [631]
-      # "topCount": 100
-      # "relatedString": "http"
+      "mode": 2,
+      "ports": [631],
+      "topCount": 10,
+      "relatedString": "http"
     },
     "udpSettings": {
       "mode": -1,
-      # "ports": [631, 161, 137, 123, 138]
-      "topCount": 50
-      # "relatedString": "telnet"
+      "ports": [631, 161, 137, 123, 138],
+      "topCount": 50,
+      "relatedString": "telnet"
     },
     "runTCP": True,
     "runUDP": False
