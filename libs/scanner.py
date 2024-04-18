@@ -32,7 +32,7 @@ for script in utils.listSubdirs(utils.getRoot("libs/scanners/")):
 
 def getScanner(port: int, protocol: str):
   for scanner in portScanners:
-    if str(scanner.__name__) == f'{port}.{protocol}.py':
+    if str(scanner.__name__) == f'{protocol}{port}.py':
       return scanner
   if protocol == "tcp":
     return tcpScanner
@@ -99,8 +99,6 @@ def processStarted():
 
 
 def parseNmapResult(result: str, address: str):
-  return
-  
   
   ports = scanutils.getPorts(result)
   hostname = scanutils.getHostname(result)
@@ -120,7 +118,7 @@ def parseNmapResult(result: str, address: str):
     resultstr += f'[{scanner.__name__}]\n'
     resultstr += scanner.scan(address, portInt) + "\n"
     
-  # print(resultstr)
+  print(resultstr)
 
 
 class ScanTask: 

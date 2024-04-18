@@ -1,9 +1,15 @@
-# Polyboard
- 
-### A very dynamic dashboard, with many features
+# Auto-Shodanner
+(name in progress)
 
-Polyboard is basically just a fancy dashboard template, but with a very extensible module system, and security features!
+Shodan is expensive, IVRE is painful to set up, and there aren't really any other good alternitives. So why not make my own version that is good in those regards?   
 
-[Read the wiki!](https://github.com/Astatin3/Modulator/wiki)
-
-![alt text](https://raw.githubusercontent.com/Astatin3/images/main/Modulator-1.png)
+Todo:
+- Actually save data
+- Scan settings page
+- data on currently ongoing scan
+- Result data Visualization
+- Result data search page
+- Implement many protocols.
+- Performance optimizations
+- Make scanning faster.
+- Make into a Debian package?

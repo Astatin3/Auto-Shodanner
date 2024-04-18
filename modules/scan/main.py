@@ -27,7 +27,7 @@ def init(moduleMaster):
   
   mm.vars['Scanner-Settings'] = {
     "range": [[0,0,0,0], [255,255,255,255]],
-    "numJobs": 500,
+    "numJobs": 10,
     "maxPingTimeout": 1,
     
     # Port modes:
@@ -38,7 +38,7 @@ def init(moduleMaster):
     
     "tcpSettings": {
       "mode": 1,
-      "ports": [443]
+      "ports": [631]
       # "topCount": 100
       # "relatedString": "http"
     },
