@@ -14,6 +14,7 @@ from threading import Thread
 import nmap
 
 import src.utils as utils
+import src.jsonpack as jsonpack
 import libs.scanutils as scanutils
 
 import libs.scanners.tcpScanner as tcpScanner
@@ -122,25 +123,35 @@ def parseNmapResult(result: object, host: str):
   
   # dict_keys(['hostnames', 'addresses', 'vendor', 'status', 'tcp', 'portused', 'osmatch'])
   
-  resultstr = '### Start Host Info ###\n'
+  # resultstr = '### Start Host Info ###\n'
+  # location = scanutils.geolocation(host)
+  # location.pop('ip', None) # The geolocation string does not have to include the IP again
+  # compressedLocationData = base64.b64encode(
+  #   zlib.compress(
+  #     jsonpack.pack(location).encode())
+  #   ).decode('ASCII')
   
-  resultstr += f'Address: {host}\n'
-  resultstr += 'Status: Up\n'
-  resultstr += f'Hostname: {result.hostname()}\n'
-  resultstr += f'Location: {scanutils.geolocation(host)}\n'
+  resultstr = f'{host},1,{result.hostname()}'
 
   osInfo = []
   if 'osmatch' in result:
     for os in result['osmatch']:
-      osInfo.append([os["accuracy"], os["name"]])
+      osInfo.append([int(os["accuracy"]), os["name"]])
 
-  resultstr += f'OS-Info: {osInfo}\n'
+  resultstr += f',{osInfo}'
 
+  resultstr += ',['
+
+  first = True
   for protocol in result.all_protocols():
     for portInt in result[protocol].keys():
       port = result[protocol][portInt]
-      
-      resultstr += f'Port: {portInt},{protocol},{port["state"]},{port["reason"]}'
+
+      if not first:
+        resultstr += ','
+      first = False
+
+      resultstr += f'[{portInt},{protocol},{port["state"]},{port["reason"]}'
       
       if port['state'] == 'open':
         data = scan(host, portInt, protocol)
@@ -148,20 +159,29 @@ def parseNmapResult(result: object, host: str):
         
         resultstr += f',{compressedData}'
       
-      resultstr += "\n"
-
-  resultstr += '### End Host Info ###\n'
+      resultstr += "]"
       
-  print(resultstr, end='')
+  resultstr += "]"
+      
+  print(resultstr)
+      
+  write(host, resultstr)
+  
+  
 
 def addOfflineHost(host:str):
-  string = '### Start Host Info ###\n' + \
-          f'Address: {host}\n' + \
-          f'Status: Down\n' + \
-           '### End Host Info ###\n'
+  write(host, f'{host},0')
   # print(string, end='')
             
   
+def write(host:str, data:str):
+  split = host.split(".")
+  
+  utils.makeDir(utils.getRoot(f"data/scans/{split[0]}/"))
+
+  with open(utils.getRoot(f"data/scans/{split[0]}/{split[1]}.txt"), "a") as file:
+    file.write(data + "\n")
+
 
 
 def scan(host:str, port: int, protocol: str):
@@ -197,7 +217,6 @@ def printBar(percentage: float, cols: int):
 
 
 def printIndicator():
-  return
   hostSearchingCount = 0
   nmapScanningCount = 0
   furtherScanningCount = 0
