@@ -5,7 +5,7 @@ Shodan is expensive, IVRE is painful to set up, and there aren't really any othe
 
 Todo:
 - Actually save data
-- Scan settings page
+- ~~Scan settings page~~
 - data on currently ongoing scan
 - Result data Visualization
 - Result data search page

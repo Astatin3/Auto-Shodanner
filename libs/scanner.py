@@ -5,6 +5,10 @@ import importlib
 import socket
 import struct
 import re
+import zlib
+import base64
+import shutil
+import resource
 from threading import Thread
 
 import nmap
@@ -17,6 +21,11 @@ import libs.scanners.udpScanner as udpScanner
 
 portScanners = []
 tasks = []
+excludeRanges = []
+
+downIps = 0
+upIps = 0
+globalSettings = {}
 
 for script in utils.listSubdirs(utils.getRoot("libs/scanners/")):
   if not script.endswith(".py"): continue
@@ -31,37 +40,20 @@ for script in utils.listSubdirs(utils.getRoot("libs/scanners/")):
   print(f'Imported: {utils.getRoot(f"libs/scanners/{module.__name__}")}')
 
   
+soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+resource.setrlimit(resource.RLIMIT_NOFILE, (hard_limit, hard_limit))
 
-def scan(host:str, port: int, protocol: str):
-  error = False
-  results = ""
-  for scanner in portScanners:
-    if str(scanner.__name__) == f'{protocol}{port}.py':
-      scanResults, error = scanner.scan(host, port)
-      results += f'[{scanner.__name__}, {host}:{port}] {scanResults}'
-      if not error:
-        return results
-      else:
-        results += " Trying default scanner... "
-    
-  if protocol == "tcp":
-    scanResults, error = tcpScanner.scan(host, port)
-    results += f'[{tcpScanner.__name__}, {host}:{port}] {scanResults}'
-  elif protocol == "udp":
-    scanResults, error = udpScanner.scan(host, port)
-    results += f'[{udpScanner.__name__}, {host}:{port}] {scanResults}'
-  else:
-    raise Exception("This should not happen...")
-
-  return results
 
 
 def start(settings):
   global tasks
+  global globalSettings
+  globalSettings = settings
   
   if processStarted(): return
   
   print("\n\nStarted Scanner!")
+  print("\n\n\n", end='')
   utils.makeDir("data/scans")
 
   portString = ""
@@ -89,9 +81,11 @@ def start(settings):
     case 3:
       portString += "T:" + ",".join(map(str, scanutils.portsRelatedTo('tcp', settings['tcpSettings']['relatedString'])))
 
+  global excludeRanges
+  excludeRanges = scanutils.parseIpList(utils.getRoot("exclude.conf"))
 
   for i in range(0,settings['numJobs']):
-    c = ScanTask(i)
+    c = ScanTask(i+1)
     t = Thread(target = c.run, args=(
       settings['maxPingTimeout'],
       settings['maxNmapTimeout'],
@@ -102,6 +96,7 @@ def start(settings):
 
 
 def stop():
+  if not processStarted(): return
   global tasks
   for task in tasks:
     task.stop()
@@ -114,62 +109,171 @@ def processStarted():
   return len(tasks) != 0;
 
 
+class hostScanDetail:
+  def __init__(self):
+    self.address = None
+    self.hostname = None
+    # self.
+
+
+
 
 def parseNmapResult(result: object, host: str):
   
-  hostname = result.hostname()
-  resultstr = f'### {host} ({hostname}) {result.keys()}\n'
+  # dict_keys(['hostnames', 'addresses', 'vendor', 'status', 'tcp', 'portused', 'osmatch'])
   
-  # resultstr += f'Location: {scanutils.geolocation(host)}\n'
+  resultstr = '### Start Host Info ###\n'
   
+  resultstr += f'Address: {host}\n'
+  resultstr += 'Status: Up\n'
+  resultstr += f'Hostname: {result.hostname()}\n'
+  resultstr += f'Location: {scanutils.geolocation(host)}\n'
+
+  osInfo = []
+  if 'osmatch' in result:
+    for os in result['osmatch']:
+      osInfo.append([os["accuracy"], os["name"]])
+
+  resultstr += f'OS-Info: {osInfo}\n'
+
   for protocol in result.all_protocols():
     for portInt in result[protocol].keys():
       port = result[protocol][portInt]
       
-      if port['state'] != 'open':
-        continue
+      resultstr += f'Port: {portInt},{protocol},{port["state"]},{port["reason"]}'
       
-      resultstr += scan(host, portInt, protocol) + "\n"
+      if port['state'] == 'open':
+        data = scan(host, portInt, protocol)
+        compressedData = base64.b64encode(zlib.compress(data.encode())).decode('ASCII')
+        
+        resultstr += f',{compressedData}'
       
-  print(resultstr)
+      resultstr += "\n"
 
+  resultstr += '### End Host Info ###\n'
+      
+  print(resultstr, end='')
+
+def addOfflineHost(host:str):
+  string = '### Start Host Info ###\n' + \
+          f'Address: {host}\n' + \
+          f'Status: Down\n' + \
+           '### End Host Info ###\n'
+  # print(string, end='')
+            
+  
+
+
+def scan(host:str, port: int, protocol: str):
+  error = False
+  results = ""
+  for scanner in portScanners:
+    if str(scanner.__name__) == f'{protocol}{port}.py':
+      scanResults, error = scanner.scan(host, port)
+      results += f'[{scanner.__name__}, {host}:{port}] {scanResults}'
+      if not error:
+        return results
+      else:
+        results += " Trying default scanner... "
+    
+  if protocol == "tcp":
+    scanResults, error = tcpScanner.scan(host, port)
+    results += f'[{tcpScanner.__name__}, {host}:{port}] {scanResults}'
+  elif protocol == "udp":
+    scanResults, error = udpScanner.scan(host, port)
+    results += f'[{udpScanner.__name__}, {host}:{port}] {scanResults}'
+  else:
+    raise Exception("This should not happen...")
+
+  return results
+
+
+# def saveData()
+
+
+def printBar(percentage: float, cols: int):
+  return ("#" * round(percentage*cols)) + ("-" * round((1-percentage) * cols))
+
+
+
+def printIndicator():
+  return
+  hostSearchingCount = 0
+  nmapScanningCount = 0
+  furtherScanningCount = 0
+  for task in tasks:
+    match task.status:
+      case 1:
+        hostSearchingCount += 1
+      case 2:
+        nmapScanningCount += 1
+      case 3:
+        furtherScanningCount += 1
+  
+  width = shutil.get_terminal_size((80, 20)).columns
+  global globalSettings
+  numJobs = int(globalSettings['numJobs'])
+  
+  print("\033[F\033[F\033[F" +
+        f"P: {printBar(hostSearchingCount/numJobs,(width-3))}\n" +
+        f"N: {printBar(nmapScanningCount/numJobs,(width-3))}\n" +
+        f"S: {printBar(furtherScanningCount/numJobs,(width-3))}\n", end="")
+  # print(f"1: {hostSearchingCount}, " +
+  #       f"2: {nmapScanningCount}, " +
+  #       f"3: {furtherScanningCount}", end="\r")
 
 class ScanTask: 
   def __init__(self, threadid: int):
     self.threadid = threadid
     self.running = True
     self.nm = nmap.PortScanner()
+    self.pingsock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
+    self.status = None
       
   def stop(self): 
-      self.running = False
+    self.running = False
         
   def run(self, maxPingTimeout: int, maxNmapTimeout: int, nmapGroupSize: int, portString: str): 
+    
+    global upIps
+    global downIps
+    global excludeRanges
+    
+
     while self.running:
+      
+      self.status = 1
+      printIndicator()
       ipGroup = []
+      
       while len(ipGroup) < nmapGroupSize and self.running:
         address = socket.inet_ntoa(struct.pack('>I', random.randint(1, 0xffffffff)))
 
-        pingCommand = f"ping {address} -c 1 -W {maxPingTimeout}"
+        if scanutils.ipInArray(address, excludeRanges):
+          # print(f"Tried {address}")
+          continue
 
-        try:
-          subprocess.check_output(pingCommand.split(" "))
-          print(f"{self.threadid} {address}: FOUND {len(ipGroup)+1}/{nmapGroupSize}")
+        if scanutils.ping(address, maxPingTimeout, self.pingsock):
+          # print(f"{self.threadid} {address}: FOUND {len(ipGroup)+1}/{nmapGroupSize}")
+          upIps += 1
           ipGroup.append(address)
-        except subprocess.CalledProcessError:
+        else:
+          addOfflineHost(address)
+          downIps += 1
           # print(f"{self.threadid} {address}: FAIL")
           continue
-      print(f'Scanning: {ipGroup}')
+
+      if not self.running: return
+
+      self.status = 2
+      printIndicator()
 
       self.nm.scan(hosts=' '.join(ipGroup), ports=portString, arguments="-O --send-eth --privileged -sS --reason -sU")
       
+      if not self.running: return
+      
+      self.status = 3
+      printIndicator()
+
       for address in self.nm.all_hosts():
         parseNmapResult(self.nm[address], address)
-
-      # nmapCommand = f"sudo nmap {address} -O --send-eth --privileged -v -sS --reason -sU -p {portString}"
-    
-      
-      # try:
-      #   parseNmapResult(subprocess.check_output(nmapCommand.split(" ")).decode(), address)
-      # except subprocess.CalledProcessError:
-      #   continue
-      

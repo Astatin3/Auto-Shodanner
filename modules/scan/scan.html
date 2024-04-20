@@ -1,16 +1,168 @@
 
 <main class="container">
-  <h4>This is a very simple example module!</h4>
+  <h2>Scan Settings</h2>
   <button class="half-left" onclick="startScanner()">Start Scanner</button>
   <button class="half-right" onclick="stopScanner()">Stop Scanner</button>
+  <button onclick="saveConfig()">Save Config</button>
+
+  <br>
+  <br>
+
+  <p>Number of scanning threads</p>
+  <input id="settingsNumJobs" type="number" />
+  <p>Ping command timeout (seconds)</p>
+  <input id="settingsPingTimeout" type="number" />
+  <p>Nmap command timeout (seconds)</p>
+  <input id="settingsNmapTimeout" type="number" />
+  <p>Nmap accumulated host count</p>
+  <input id="settingsNmapGroupSize" type="number" />
+
+  <p>TCP Settings</p>
+  <select id="settingsTCPDropdown" onchange="updateTCPDropdown()">
+    <option selected value=-1>Disable</option>
+    <option value=1>Specify ports</option>
+    <option value=2>N Most common ports</option>
+    <option value=3>Ports related to string</option>
+  </select>
+  <input id="settingsTCP" style="display: none;" />
+
+  <p>UDP Settings</p>
+  <select id="settingsUDPDropdown" onchange="updateUDPDropdown()">
+    <option selected value=-1>Disable</option>
+    <option value=1>Specify ports</option>
+    <option value=2>N Most common ports</option>
+    <option value=3>Ports related to string</option>
+  </select>
+  <input id="settingsUDP" style="display: none;" />
+
 </main>
 
 <script>
-  window.main = ()=>{
-    window.addListener('Scanner-LoadSettings', (data)=>{})
+  function getel(el) {return document.getElementById(el)}
+
+  const settingsNumJobs = getel('settingsNumJobs')
+  const settingsPingTimeout = getel('settingsPingTimeout')
+  const settingsNmapTimeout = getel('settingsNmapTimeout')
+  const settingsNmapGroupSize = getel('settingsNmapGroupSize')
+  const settingsTCPDropdown = getel('settingsTCPDropdown')
+  const settingsTCP = getel('settingsTCP')
+  const settingsUDPDropdown = getel('settingsUDPDropdown')
+  const settingsUDP = getel('settingsUDP')
+
+  let settings = {
+    "numJobs": -1,
+    "maxPingTimeout": -1,
+    "maxNmapTimeout": -1,
+    "nmapGroupSize": -1,
+    
+    "tcpSettings": {
+      "mode": -1,
+      "ports": [],
+      "topCount": -1,
+      "relatedString": ""
+    },
+    "udpSettings": {
+      "mode": -1,
+      "ports": [],
+      "topCount": -1,
+      "relatedString": ""
+    }
+  } 
+
+  function updateTCPDropdown(){
+    if(settingsTCPDropdown.value == -1){
+      settingsTCP.style.display = "none"
+    }else{
+      settingsTCP.style.display = ""
+      switch(Number(settingsTCPDropdown.value)){
+        case 1:
+          settingsTCP.value = settings.tcpSettings.ports.join(", ")
+          break;
+        case 2:
+          settingsTCP.value = settings.tcpSettings.topCount
+          break;
+        case 3:
+          settingsTCP.value = settings.tcpSettings.relatedString
+          break;
+      }
+    }
   }
 
-  function getel(el) {return document.getElementById(el)}
+  function updateUDPDropdown(){
+    if(settingsUDPDropdown.value == -1){
+      settingsUDP.style.display = "none"
+    }else{
+      settingsUDP.style.display = ""
+      switch(Number(settingsUDPDropdown.value)){
+        case 1:
+          settingsUDP.value = settings.udpSettings.ports.join(", ")
+          break;
+        case 2:
+          settingsUDP.value = settings.udpSettings.topCount
+          break;
+        case 3:
+          settingsUDP.value = settings.udpSettings.relatedString
+          break;
+      }
+    }
+  }
+
+  window.main = ()=>{
+
+
+
+  window.addListener('Scanner-Settings', (data)=>{
+    settings = data.data
+    settingsNumJobs.value = settings.numJobs
+    settingsPingTimeout.value = settings.maxPingTimeout
+    settingsNmapTimeout.value = settings.maxNmapTimeout
+    settingsNmapGroupSize.value = settings.nmapGroupSize
+    settingsTCPDropdown.value = settings.tcpSettings.mode
+    settingsUDPDropdown.value = settings.udpSettings.mode
+
+    updateTCPDropdown()
+    updateUDPDropdown()
+  })
+
+  window.client.send('Scanner-LoadSettings', {})
+
+  }
+
+  function saveConfig() {
+    settings.numJobs = Number(settingsNumJobs.value)
+    settings.maxPingTimeout = Number(settingsPingTimeout.value)
+    settings.maxNmapTimeout = Number(settingsNmapTimeout.value)
+    settings.nmapGroupSize = Number(settingsNmapGroupSize.value)
+    settings.tcpSettings.mode = Number(settingsTCPDropdown.value)
+    settings.udpSettings.mode = Number(settingsUDPDropdown.value)
+
+    switch(Number(settingsTCPDropdown.value)){
+      case 1:
+      settings.tcpSettings.ports = settingsTCP.value.split(',').map(Number)
+        break;
+      case 2:
+        settings.tcpSettings.topCount = Number(settingsTCP.value)
+        break;
+      case 3:
+        settings.tcpSettings.relatedString = settingsTCP.value
+        break;
+    }
+
+    switch(Number(settingsUDPDropdown.value)){
+      case 1:
+        settings.udpSettings.ports = settingsUDP.value.split(',').map(Number)
+        break;
+      case 2:
+        settings.udpSettings.topCount = Number(settingsUDP.value)
+        break;
+      case 3:
+        settings.udpSettings.relatedString = settingsUDP.value
+        break;
+    }
+
+    // console.log(settings)
+    window.send("Scanner-SetSettings", settings)
+  }
 
   function startScanner() {
     window.send('Scanner-StartScanner', {})

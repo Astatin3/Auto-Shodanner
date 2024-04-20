@@ -9,7 +9,46 @@ def loadSettings(ac):
 
 
 def setSettings(ac, data):
-  mm.vars['Scanner-Settings'] = data['data']
+  if not mm.userInGroup(ac, 'Admins'):
+    mm.sendPopupError(ac.rawClient, "Error", "You are not authorised")
+    return
+  
+  data = data['data']
+  valid = True
+  
+  valid = valid and isinstance(data['numJobs'], int)
+  valid = valid and isinstance(data['maxPingTimeout'], int)
+  valid = valid and isinstance(data['maxNmapTimeout'], int)
+  valid = valid and isinstance(data['nmapGroupSize'], int)
+  
+  valid = valid and isinstance(data['tcpSettings'], dict)
+  valid = valid and isinstance(data['udpSettings'], dict)
+  
+  valid = valid and isinstance(data['tcpSettings']['mode'], int)
+  valid = valid and isinstance(data['udpSettings']['mode'], int)
+  
+  if valid:
+    for obj in [data['tcpSettings'], data['udpSettings']]:
+      match obj['mode']:
+        case -1:
+          pass
+        case 1:
+          valid = valid and isinstance(obj['mode'], int)
+          valid = valid and isinstance(obj['ports'], list)
+          if valid:
+            valid = valid and all(isinstance(val, int) for val in obj['ports'])
+        case 2:
+          valid = valid and isinstance(obj['topCount'], int)
+        case 3:
+          valid = valid and isinstance(obj['relatedString'], str)
+        case _:
+          valid = False
+      
+  if valid:
+    print(data)
+    mm.vars['Scanner-Settings'] = data
+  else:
+    mm.sendPopupError(ac.rawClient, "Error", "There is an error in the config.")
 
 
 def startScanner(ac, data):
@@ -26,11 +65,10 @@ def init(moduleMaster):
   mm = moduleMaster
   
   mm.vars['Scanner-Settings'] = {
-    "range": [[0,0,0,0], [255,255,255,255]],
-    "numJobs": 30,
+    "numJobs": 500,
     "maxPingTimeout": 3,
     "maxNmapTimeout": 2,
-    "nmapGroupSize": 3,
+    "nmapGroupSize": 10,
     
     # Port modes:
     # -1: Disable
@@ -40,21 +78,20 @@ def init(moduleMaster):
     
     "tcpSettings": {
       "mode": 2,
-      "ports": [631],
-      "topCount": 10,
+      "ports": [22, 80, 443],
+      "topCount": 100,
       "relatedString": "http"
     },
     "udpSettings": {
       "mode": -1,
-      "ports": [631, 161, 137, 123, 138],
-      "topCount": 50,
+      "ports": [631, 161, 137],
+      "topCount": 100,
       "relatedString": "telnet"
-    },
-    "runTCP": True,
-    "runUDP": False
+    }
   } 
   
-  mm.addPageEventListener('Scanner-LoadSettings', loadSettings)
+  mm.addPageEventListener('/Scan/Scan', loadSettings)
+  mm.addAuthEventListener('Scanner-SetSettings', setSettings)
   
   mm.addAuthEventListener('Scanner-StartScanner', startScanner)
   mm.addAuthEventListener('Scanner-StopScanner', stopScanner)

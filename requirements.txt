@@ -2,3 +2,4 @@ flask
 geoip2
 faker
 python-nmap
+pyopenssl

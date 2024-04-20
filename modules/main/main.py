@@ -2,9 +2,10 @@ import libs.scanutils as scanutils
 mm = None
 
 def dashboardMetrics(ac):
-  ac.send('Scanner-Metrics', {
-    "scanCount": scanutils.countScannedIps()
-  })
+  pass
+  # ac.send('Scanner-Metrics', {
+    # "scanCount": scanutils.countScannedIps()
+  # })
 
 def init(moduleMaster):
   global mm
