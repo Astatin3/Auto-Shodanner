@@ -45,14 +45,14 @@ def setSettings(ac, data):
           valid = False
       
   if valid:
-    # print(data)
+    print(data)
     mm.vars['Scanner-Settings'] = data
   else:
     mm.sendPopupError(ac.rawClient, "Error", "There is an error in the config.")
 
 
 def onStats(stats):
-  print(stats)
+  # print(stats)
   for ac in mm.authServer.clients:
     if ac.currentPage == "/main/dashboard":
       ac.send("Scanner-Metrics", stats)

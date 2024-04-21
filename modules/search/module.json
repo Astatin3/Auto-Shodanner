@@ -1,0 +1,20 @@
+{
+  "name": "search",
+  "creators": ["ASTATIN3"],
+  "version": "1.0",
+  "entrypoint": "modules/search/main.py",
+  "tabs": [
+      {
+          "name": "Search",
+          "defaultPage": "Search",
+          "pages": [
+            {
+                "type": "page",
+                "name": "Search",
+                "requiredPermGroup": "",
+                "location": "modules/search/search.html"
+            }
+          ]
+      }
+  ]
+}

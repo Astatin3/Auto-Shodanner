@@ -1,0 +1,111 @@
+<style>
+
+main #searchBar {
+  display: inline;
+}
+
+main button {
+  width: calc(50% - 6px);
+  display: inline;
+}
+
+tr button {
+  margin:0;
+}
+
+</style>
+
+<main class="container">
+  <button id="tagBtn" onclick="tagList()">Tags</button>
+  <button id="searchBtn">Search</button>
+  <textarea
+    id="searchBar"
+    placeholder="Search..."></textarea>
+</main>
+
+<script>
+  const tagBtn = document.getElementById('tagBtn')
+  const searchBtn = document.getElementById('searchBtn')
+
+  tags = [
+    {
+      name: "str",
+      short_description: "Defines if a scan result contains text anywhere",
+      usage:`
+str:"HTTP/1.1 200 OK" - Webpages
+`
+    },
+    {
+      name: "port",
+      short_description: "Defines if a port is present in a scan",
+      usage:`
+port:[port, port range, or port name]/[protocol](/[status])
+
+port:80/tcp          - Look for all open http ports
+port:80/tcp/open     - Look for all open http ports
+port:80/tcp/filtered - Look for all filtered http ports
+port:http/tcp        - Look for all open http ports
+port:80-90/tcp       - Look for all open ports between 80 and 90
+`
+    }
+  ]
+
+  function tagDescription(tagIndex){
+    const tag = tags[tagIndex]
+    const elem = document.body
+    const bgcolor = 'var(--card-sectionning-background-color)'
+    const header = 'rgba(255,255,255,0.05)'
+    const textColor = 'text-white'
+    const title = `Tag ${tag.name} description`
+
+    utils.modal(elem, bgcolor, header, textColor, title, 
+    `<p>${tag.short_description}<br><br>${tag.usage.replaceAll("\n", "<br>")}</p>`)
+  }
+
+  function addTag(tagIndex){
+    const tag = tags[tagIndex]
+    const elem = document.body
+    const bgcolor = 'var(--card-sectionning-background-color)'
+    const header = 'rgba(255,255,255,0.05)'
+    const textColor = 'text-white'
+    const title = `Add tag ${tag.name}`
+
+    utils.modal(elem, bgcolor, header, textColor, title, 
+    `<p>Tag "${tag.name}" - ${tag.short_description}</p><br>
+    <input placeholder="${tag.name}:<data>"></input>`)
+  }
+
+  function tagList(){
+    const elem = document.body
+    const bgcolor = 'var(--card-sectionning-background-color)'
+    const header = 'rgba(255,255,255,0.05)'
+    const textColor = 'text-white'
+    const title = "Search Tags"
+
+    utils.modal(elem, bgcolor, header, textColor, title, `
+    <table role="grid">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${(()=>{
+        str = ""
+        for(let i=0;i<tags.length;i++){
+          str += "<tr>"
+          str += `<td>${tags[i].name}</td>`
+          str += `<td><button onclick="tagDescription(${i})">Click</button></td>`
+          str += `<td><button onclick="addTag(${i})">Add</button></td>`
+          str += "</tr>"
+        }
+        return str
+      })()}
+    </tbody>
+    </table>`)
+  }
+
+  window.main = () => {}
+  
+</script>
