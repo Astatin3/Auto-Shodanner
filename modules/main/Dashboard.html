@@ -1,19 +1,112 @@
 
 
 <main class="container">
+  <h2>Auto-Shodanner</h2>
+  <p id="scanText">No scan is running, but this is where statistics will show up!</p>
+  <canvas id="pingChart" style="display: none;"></canvas>
+  <canvas id="threadChart" style="display: none;"></canvas>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+const scanText = document.getElementById('scanText')
+
+const pingChartctx = document.getElementById('pingChart')
+const pingChart = new Chart(pingChartctx, {
+  type: 'line',
+  responsive: true,
+  labels: Array.from(Array(10).keys()),
+  data: {
+    datasets: [{
+      label: 'IPs UP Per second',
+      data: [],
+      borderWidth: 1
+    },{
+      label: 'IPs DOWN Per second',
+      data: [],
+      borderWidth: 1
+    },{
+      label: 'IPs with ports Per second',
+      data: [],
+      borderWidth: 1
+    }]
+  },
+  options: {
+    scales: {
+      x: {
+        type: 'linear'
+      }
+    }
+  }
+})
+
+const threadChartctx = document.getElementById('threadChart')
+const threadChart = new Chart(threadChartctx, {
+  type: 'line',
+  responsive: true,
+  labels: Array.from(Array(10).keys()),
+  data: {
+    datasets: [{
+      label: 'Ping scanning',
+      fill: true,
+      data: [],
+      borderWidth: 1
+    },{
+      label: 'Nmap scanning',
+      fill: true,
+      data: [],
+      borderWidth: 1
+    },{
+      label: 'Extended scanning',
+      fill: true,
+      data: [],
+      borderWidth: 1
+    }]
+  },
+  options: {
+    scales: {
+      x: {
+        type: 'linear'
+      },
+      y: {
+        min: 0,
+        max: 500
+      }
+    }
+  }
+})
+
+let dataCount = 0
 
 window.main = () => {
   window.addListener('Scanner-Metrics', (data)=>{
-    document.getElementsByClassName("container")[0].innerHTML = `
-    <h1>Auto-Shodanner</h1>
-    <h3>Addresses Scanned: ${data.data.scanCount} (${data.data.scanCount/42949672.96}% Of the internet.)</h3>
-    `
+    data = data.data
+    utils.getel("pingChart").style.display = ""
+    utils.getel("threadChart").style.display = ""
+
+    pingChart.data.datasets[0].data.push(data.upIpsPS)
+    pingChart.data.datasets[1].data.push(data.downIpsPS)
+    pingChart.data.datasets[2].data.push(data.extendedIpsPS)
+
+    pingChart.data.labels.push(dataCount)
+    pingChart.update()
+
+    threadChart.data.datasets[0].data.push(data.hostSearchingCount)
+    threadChart.data.datasets[1].data.push(data.hostSearchingCount+data.nmapScanningCount)
+    threadChart.data.datasets[2].data.push(data.numJobs)
+
+    threadChart.data.labels.push(dataCount)
+    threadChart.update()
+
+    dataCount += 1
+
+    scanText.innerText = '' +
+    `Total addresses scanned: ${data.countScannedBeforeStart+data.upIps+data.downIps}\n` +
+    `Down this session: ${data.downIps}\n` +
+    `Up this session: ${data.upIps}\n` +
+    `With ports this session: ${data.extendedIps}`
   })
 }
-
 
 
 </script>

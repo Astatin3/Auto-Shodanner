@@ -9,7 +9,7 @@ import zlib
 import base64
 import shutil
 import resource
-from threading import Thread
+from threading import Thread, Timer
 
 import nmap
 
@@ -24,9 +24,20 @@ portScanners = []
 tasks = []
 excludeRanges = []
 
-downIps = 0
 upIps = 0
+downIps = 0
+extendedIps = 0
+
+upIpsPS = 0
+downIpsPS = 0
+extendedIpsPS = 0
+
+countScannedBeforeStart = 0
+
+running = False
 globalSettings = {}
+onStatsFunc = None
+
 
 for script in utils.listSubdirs(utils.getRoot("libs/scanners/")):
   if not script.endswith(".py"): continue
@@ -46,12 +57,31 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (hard_limit, hard_limit))
 
 
 
-def start(settings):
+def start(settings, onStats):
+  if processStarted(): return
   global tasks
   global globalSettings
   globalSettings = settings
   
-  if processStarted(): return
+  global onStatsFunc
+  onStatsFunc = onStats
+  
+  global upIps
+  global downIps
+  global extendedIps
+  upIps = 0
+  downIps = 0
+  extendedIps = 0
+  
+  global upIpsPS
+  global downIpsPS
+  global extendedIpsPS
+  upIpsPS = 0
+  downIpsPS = 0
+  extendedIpsPS = 0
+  
+  global countScannedBeforeStart
+  countScannedBeforeStart = scanutils.countScannedIps()
   
   print("\n\nStarted Scanner!")
   print("\n\n\n", end='')
@@ -85,6 +115,9 @@ def start(settings):
   global excludeRanges
   excludeRanges = scanutils.parseIpList(utils.getRoot("exclude.conf"))
 
+  global running
+  running = True
+
   for i in range(0,settings['numJobs']):
     c = ScanTask(i+1)
     t = Thread(target = c.run, args=(
@@ -94,14 +127,16 @@ def start(settings):
       portString,))
     t.start()
     tasks.append(c)
+    
+  statsTimer()
 
 
 def stop():
   if not processStarted(): return
   global tasks
-  for task in tasks:
-    task.stop()
+  global running
   tasks = []
+  running = False
   print("\n\nstopped Scanner!")
 
 
@@ -116,6 +151,54 @@ class hostScanDetail:
     self.hostname = None
     # self.
 
+def statsTimer():
+  if running:
+    Timer(1.0, statsTimer).start()
+
+  global upIps
+  global downIps
+  global extendedIps
+  
+  global upIpsPS
+  global downIpsPS
+  global extendedIpsPS
+  global numJobs
+  global countScannedBeforeStart
+
+  hostSearchingCount = 0
+  nmapScanningCount = 0
+  furtherScanningCount = 0
+  for task in tasks:
+    match task.status:
+      case 1:
+        hostSearchingCount += 1
+      case 2:
+        nmapScanningCount += 1
+      case 3:
+        furtherScanningCount += 1    
+
+  stats = {
+    "upIps": upIps,
+    "downIps": downIps,
+    "extendedIps": extendedIps,
+    
+    "upIpsPS": upIpsPS,
+    "downIpsPS": downIpsPS,
+    "extendedIpsPS": extendedIpsPS,
+    
+    "hostSearchingCount": hostSearchingCount,
+    "nmapScanningCount": nmapScanningCount,
+    "furtherScanningCount": furtherScanningCount,
+    "countScannedBeforeStart": countScannedBeforeStart,
+    "numJobs": int(globalSettings['numJobs'])
+    
+  }
+  upIpsPS = 0
+  downIpsPS = 0
+  extendedIpsPS = 0
+
+  
+  onStatsFunc(stats)
 
 
 
@@ -156,14 +239,20 @@ def parseNmapResult(result: object, host: str):
       if port['state'] == 'open':
         data = scan(host, portInt, protocol)
         compressedData = base64.b64encode(zlib.compress(data.encode())).decode('ASCII')
-        
+
         resultstr += f',{compressedData}'
       
       resultstr += "]"
       
   resultstr += "]"
-      
-  print(resultstr)
+  
+  if len(result.all_protocols()) > 0:
+    global extendedIps
+    global extendedIpsPS
+    extendedIps += 1
+    extendedIpsPS += 1
+  
+  # print(resultstr)
       
   write(host, resultstr)
   
@@ -215,57 +304,35 @@ def printBar(percentage: float, cols: int):
   return ("#" * round(percentage*cols)) + ("-" * round((1-percentage) * cols))
 
 
-
-def printIndicator():
-  hostSearchingCount = 0
-  nmapScanningCount = 0
-  furtherScanningCount = 0
-  for task in tasks:
-    match task.status:
-      case 1:
-        hostSearchingCount += 1
-      case 2:
-        nmapScanningCount += 1
-      case 3:
-        furtherScanningCount += 1
-  
-  width = shutil.get_terminal_size((80, 20)).columns
-  global globalSettings
-  numJobs = int(globalSettings['numJobs'])
-  
-  print("\033[F\033[F\033[F" +
-        f"P: {printBar(hostSearchingCount/numJobs,(width-3))}\n" +
-        f"N: {printBar(nmapScanningCount/numJobs,(width-3))}\n" +
-        f"S: {printBar(furtherScanningCount/numJobs,(width-3))}\n", end="")
-  # print(f"1: {hostSearchingCount}, " +
-  #       f"2: {nmapScanningCount}, " +
-  #       f"3: {furtherScanningCount}", end="\r")
-
 class ScanTask: 
   def __init__(self, threadid: int):
     self.threadid = threadid
-    self.running = True
     self.nm = nmap.PortScanner()
     self.pingsock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
     self.status = None
-      
-  def stop(self): 
-    self.running = False
         
   def run(self, maxPingTimeout: int, maxNmapTimeout: int, nmapGroupSize: int, portString: str): 
     
     global upIps
     global downIps
+    global extendedIps
+    
+    global upIpsPS
+    global downIpsPS
+    global extendedIpsPS
+    
     global excludeRanges
+    global running
+    
+    
     
 
-    while self.running:
+    while running:
       
       self.status = 1
-      printIndicator()
       ipGroup = []
       
-      while len(ipGroup) < nmapGroupSize and self.running:
+      while len(ipGroup) < nmapGroupSize and running:
         address = socket.inet_ntoa(struct.pack('>I', random.randint(1, 0xffffffff)))
 
         if scanutils.ipInArray(address, excludeRanges):
@@ -275,24 +342,24 @@ class ScanTask:
         if scanutils.ping(address, maxPingTimeout, self.pingsock):
           # print(f"{self.threadid} {address}: FOUND {len(ipGroup)+1}/{nmapGroupSize}")
           upIps += 1
+          upIpsPS += 1
           ipGroup.append(address)
         else:
           addOfflineHost(address)
           downIps += 1
+          downIpsPS += 1
           # print(f"{self.threadid} {address}: FAIL")
           continue
 
-      if not self.running: return
+      if not running: return
 
       self.status = 2
-      printIndicator()
 
       self.nm.scan(hosts=' '.join(ipGroup), ports=portString, arguments="-O --send-eth --privileged -sS --reason -sU")
       
-      if not self.running: return
+      if not running: return
       
       self.status = 3
-      printIndicator()
 
       for address in self.nm.all_hosts():
         parseNmapResult(self.nm[address], address)

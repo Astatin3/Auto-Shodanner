@@ -72,16 +72,73 @@ def ping(host:str, timeout:int, sock):
 
 
 
-# def countScannedIps():
-#   files = utils.listSubdirs("data/")
-#   count = 0
-#   for file in files:
-#     if file.split("-")[0] != "scan":
-#       continue
-#     with open('data/'+file) as f:
-#       #Count lines in scan files, Masscan has a 2 line header, so hence -2
-#       count += sum(1 for _ in f)-2
-#   return count
+def countScannedIps():
+  files = utils.listSubdirs("data/")
+  count = 0
+  for folder in utils.listSubdirs(utils.getRoot("data/scans/")):
+    for file in utils.listSubdirs(utils.getRoot(f"data/scans/{folder}")):
+      with open(utils.getRoot(f"data/scans/{folder}/{file}"), "r") as file:
+        lines = file.readlines()
+        count += sum(1 for _ in lines) - 1
+  return count
+
+
+
+
+def parse_csv_line(line):
+    elements = []
+    current_element = ""
+    inside_array = False
+    array_content = ""
+    inside_quotes = False
+    
+    for char in line:
+        if char == ',' and not inside_array and not inside_quotes:
+            if array_content:
+                elements.append(parse_csv_line(array_content[1:-1]))
+                array_content = ""
+            else:
+                elements.append(current_element.strip())
+            current_element = ""
+        elif char == '[' and not inside_quotes:
+            inside_array = True
+            array_content += char
+        elif char == ']' and not inside_quotes:
+            inside_array = False
+            array_content += char
+        elif char == "'":
+            inside_quotes = not inside_quotes
+            current_element += char
+        else:
+            if inside_array:
+                array_content += char
+            else:
+                current_element += char
+    
+    if current_element:
+        if current_element.startswith("'") and current_element.endswith("'"):
+            current_element = current_element[1:-1]
+        elements.append(current_element.strip())
+    elif array_content:
+        elements.append(parse_csv_line(array_content[1:-1]))
+    
+    return elements
+
+
+def find():
+  for folder in utils.listSubdirs(utils.getRoot("data/scans/")):
+    for file in utils.listSubdirs(utils.getRoot(f"data/scans/{folder}")):
+      with open(utils.getRoot(f"data/scans/{folder}/{file}"), "r") as file:
+        lines = file.readlines()
+        for line in lines:
+          data = parse_csv_line(line)
+          if data[1] != "1":
+            continue
+          print(f'{data[0]} ({data[2]}), {data[4]}')
+    
+
+
+
 
 def getMostCommon(protocol: str, n: int):
   nmap_services_file = "/usr/share/nmap/nmap-services"

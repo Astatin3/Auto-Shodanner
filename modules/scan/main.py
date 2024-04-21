@@ -45,19 +45,27 @@ def setSettings(ac, data):
           valid = False
       
   if valid:
-    print(data)
+    # print(data)
     mm.vars['Scanner-Settings'] = data
   else:
     mm.sendPopupError(ac.rawClient, "Error", "There is an error in the config.")
 
 
+def onStats(stats):
+  print(stats)
+  for ac in mm.authServer.clients:
+    if ac.currentPage == "/main/dashboard":
+      ac.send("Scanner-Metrics", stats)
+
+
 def startScanner(ac, data):
-  scan.start(mm.vars['Scanner-Settings'])
+  mm.sendPopupSuccess(ac.rawClient, "Scanner", "Scanner Started!")
+  scan.start(mm.vars['Scanner-Settings'], onStats)
   
   
 def stopScanner(ac, data):
+  mm.sendPopupSuccess(ac.rawClient, "Scanner", "Scanner Stopped!")
   scan.stop()
-
 
 
 def init(moduleMaster):
@@ -97,9 +105,4 @@ def init(moduleMaster):
   mm.addAuthEventListener('Scanner-StopScanner', stopScanner)
 
 def main():
-  while True:
-    if scan.processStarted():
-      print("eee")
-      # print(scan.getStdout())
-    # print("eee")
-    time.sleep(1)
+  pass

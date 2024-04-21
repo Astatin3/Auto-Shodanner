@@ -205,3 +205,4 @@ def deleteUser(ac, data):
   mm.deleteUser(user)
   mm.sendPopupSuccess(ac.rawClient, "Success", "User deleted!")  
   loadSessionsAdmin(ac)
+  
